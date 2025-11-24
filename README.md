@@ -180,28 +180,6 @@ DeepTrust uses a modern, trust-focused design:
 - **Destructive Color:** Red - Fake content
 - **Dark Theme:** Professional, high-tech aesthetic
 
-## 📊 Wave 2 Progress
-
-### Completed ✅
-- [x] Functional architecture design
-- [x] UI wireframes and interactive demo
-- [x] Mock API scaffolding
-- [x] Smart contract interface design
-- [x] TypeScript type definitions
-- [x] Design system implementation
-- [x] Responsive layout
-- [x] GitHub repository setup
-
-### Next Steps (Wave 3+)
-- [ ] Implement actual AI detection models
-- [ ] Deploy smart contracts to BlockDAG
-- [ ] Integrate IPFS storage
-- [ ] Build backend API server
-- [ ] Add authentication system
-- [ ] Create SDK for dApp integration
-- [ ] Performance optimization
-- [ ] Security audit
-
 ## 🎯 Market Opportunity
 
 - **Target Users:** NFT marketplaces, media platforms, journalists, DAOs, Web3 identity systems
@@ -230,6 +208,4 @@ This project is part of the BlockDAG Buildathon submission.
 - AI/ML research community
 - Web3 ecosystem builders
 
----
 
-**Built with ❤️ for a more trustworthy digital future**
