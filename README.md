@@ -5,207 +5,112 @@
 
 > **In a world where AI can lie, trust must be verifiable**
 
-DeepTrust is a decentralized AI verification oracle that ensures content authenticity across Web3 platforms, NFT marketplaces, media outlets, and DAOs. By combining state-of-the-art AI deepfake detection with on-chain verification, DeepTrust enables users and platforms to instantly know what is real or AI-generated, anchored by a trustproof on blockchain.
+DeepTrust is a decentralized AI verification oracle that ensures content authenticity across Web3 platforms. By combining **off-chain AI deepfake detection** with **on-chain BlockDAG verification**, DeepTrust provides a scalable, immutable proof of authenticity.
 
-## 🏆 Wave 2 Submission
+## 🏆 Wave 2 Submission: Functional Milestone
 
 **Team:** A Girl's World + Siya  
 **Hackathon:** BlockDAG Buildathon - The Amazing Chain Race  
 **Lane:** AI  
-**GitHub:** [https://github.com/ST10375560/DeepTrust](https://github.com/ST10375560/DeepTrust)
 
-### Wave 2 Deliverables
+### 🚀 Wave 2 Technical Upgrades
+We have transitioned from a concept to a functional technical architecture:
 
-✅ **Functional Architecture** - Multi-layer verification system  
-✅ **Smart Contract Scaffolds** - Blockchain integration structure  
-✅ **Mock APIs** - Backend verification pipeline  
-✅ **UI Wireframe** - Interactive demo interface  
-✅ **Tech Stack Documentation** - Complete technology overview
+1.  **Smart Contracts (`/contracts`)**: Solidity contracts deployed on BlockDAG to anchor verification results immutably.
+2.  **Hybrid Architecture**: Heavy AI processing runs off-chain for scalability, while cryptographic proofs are stored on-chain.
+3.  **Backend Oracle (`/server`)**: A Node.js/Express oracle that bridges the gap between the AI engine and the Blockchain.
 
-## 🎯 Problem Statement
+## 🏗️ Technical Architecture
 
-- AI-generated content is proliferating at an unprecedented rate
-- Platforms and NFT marketplaces cannot verify authenticity in real-time
-- Creators risk reputation and revenue loss; users risk misinformation
-- There is no decentralized truth layer for Web3 content
+Our architecture is designed for **Scalability**. Running deep learning models entirely on-chain is cost-prohibitive and slow. DeepTrust solves this with a hybrid approach:
 
-**Key Statistics:**
-- Over 60% of viral videos contain AI-generated manipulations in 2025
-- Over $2B lost in NFT and DeFi scams in the past year due to unverifiable content
+1.  **Off-Chain (AI Layer)**:
+    *   User uploads content to the DeepTrust API.
+    *   **PyTorch/TensorFlow** models analyze the media (visual artifacts, temporal consistency).
+    *   A `TrustScore` (0-100) is calculated locally.
+    *   Detailed metadata is hashed (e.g., to IPFS).
 
-## 💡 Solution
-
-DeepTrust provides a multi-layer verification system:
-
-### 1. AI Detection Layer
-- **CNN + Transformer architecture** detects deepfakes in images, videos, and audio
-- Generates confidence scores and detailed metadata
-- Multi-modal analysis (visual, temporal, audio)
-
-### 2. TrustScore Engine
-- Produces a **0–100% authenticity score**
-- Weighted algorithm based on multiple factors
-- Context-aware evaluation
-
-### 3. Blockchain Layer
-- Generates cryptographic hash of content and metadata
-- Stores verification hash and proof on-chain using smart contracts
-- Ensures tamper-proof verification and immutable history
-- Cross-chain compatible
-
-### 4. DeepTrust Badge
-- Displays "Verified Real" or "AI-Generated" in apps
-- Integrates with NFT marketplaces, DAOs, and dApps
-- Real-time verification status
-
-## 🏗️ Architecture
+2.  **On-Chain (BlockDAG Layer)**:
+    *   The **Oracle Server** submits a transaction to the `DeepTrustVerification` smart contract.
+    *   **Stored Data**: `ContentHash`, `TrustScore`, `AIMetadataHash`, `Timestamp`.
+    *   **Result**: A transparent, tamper-proof record that anyone can verify using the content's hash.
 
 ```
-User/dApp Upload
-       ↓
-AI Detection Layer (CNN + Transformer)
-       ↓
-TrustScore Engine (0-100% Score)
-       ↓
-Blockchain Layer (Smart Contracts/Oracle)
-       ↓
-DeepTrust Badge Display
+[User Upload] -> [AI Engine (Off-Chain)] -> [Oracle Node] -> [BlockDAG Smart Contract]
+                                                  |
+                                            [Trust Badge UI]
+```
+
+## 📦 Project Structure
+
+```bash
+DeepTrust/
+├── contracts/               # 🆕 Smart Contracts (Solidity)
+│   └── DeepTrustVerification.sol  # Main anchoring contract
+├── server/                  # 🆕 Backend Oracle
+│   ├── server.js            # API Endpoint
+│   └── blockchain.js        # Ethers.js integration with BlockDAG
+├── scripts/                 # 🆕 Deployment Scripts
+│   └── deploy.js            # Hardhat deploy script
+├── src/                     # Frontend (React/Vite)
+│   ├── components/          # UI Components
+│   └── lib/                 # API Clients
+└── hardhat.config.cjs       # BlockDAG Network Config
 ```
 
 ## 🔧 Technology Stack
 
-### AI/ML
-- **PyTorch** - Deep learning framework
-- **TensorFlow** - Model training and deployment
-- **CNN Architecture** - Visual analysis
-- **Transformer Models** - Temporal consistency
-
-### Blockchain
-- **BlockDAG Network** - Base layer
-- **Smart Contracts** - Verification storage
-- **Oracle Integration** - Off-chain data
-- **IPFS** - Distributed storage
-
-### Backend
-- **Node.js** - Server runtime
-- **FastAPI** - Python API framework
-- **GraphQL** - Query language
-- **WebSocket** - Real-time updates
-
-### Frontend
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **shadcn/ui** - Component library
+*   **Blockchain**: BlockDAG Network, Solidity, Hardhat, Ethers.js
+*   **Backend**: Node.js, Express
+*   **Frontend**: React, Tailwind CSS, shadcn/ui
+*   **AI (Mock/Planned)**: PyTorch, CNN + Transformer Ensembles
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Node.js 18+ and npm
-- Git
+### 1. Prerequisites
+*   Node.js 18+
+*   BlockDAG Wallet (Private Key) for deployment
 
-### Installation
+### 2. Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/ST10375560/DeepTrust.git
+# Install all dependencies (Frontend + Backend + Blockchain)
+bun install
+```
 
-# Navigate to project directory
-cd DeepTrust
+### 3. Deploy Smart Contracts
 
-# Install dependencies
-npm install
+Create a `.env` file with your credentials:
+```env
+PRIVATE_KEY=your_private_key_here
+BDAG_RPC_URL=https://rpc.primordial.bdagscan.com
+```
 
-# Start development server
+Deploy to BlockDAG:
+```bash
+npx hardhat run scripts/deploy.js --network blockdag
+```
+*Copy the deployed address to your .env file as `CONTRACT_ADDRESS`.*
+
+### 4. Run the Stack
+
+**Start the Backend Oracle:**
+```bash
+node server/server.js
+```
+
+**Start the Frontend:**
+```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:8080`
+## 📜 Smart Contract Interface
 
-## 📦 Project Structure
+The `DeepTrustVerification` contract provides the following core methods:
 
-```
-DeepTrust/
-├── src/
-│   ├── components/          # React components
-│   │   ├── Hero.tsx        # Landing section
-│   │   ├── Architecture.tsx # System architecture
-│   │   ├── VerificationDemo.tsx # Interactive demo
-│   │   └── TechStack.tsx   # Technology overview
-│   ├── lib/
-│   │   └── mockApi.ts      # Mock API scaffolding
-│   ├── types/
-│   │   └── verification.ts # TypeScript interfaces
-│   └── pages/
-│       └── Index.tsx       # Main page
-├── public/                  # Static assets
-└── README.md
-```
-
-## 🔌 API Scaffolding
-
-### Verification Pipeline
-
-```typescript
-// Mock API structure for Wave 2
-const result = await deepTrustAPI.verifyContent(file);
-
-interface VerificationResult {
-  id: string;
-  trustScore: TrustScore;
-  status: "verified" | "suspicious" | "fake";
-  blockchainProof: BlockchainProof;
-  analysis: AIAnalysis;
-  createdAt: string;
-}
-```
-
-### Smart Contract Methods
-
-```typescript
-interface SmartContractScaffold {
-  storeVerification: (hash: string, score: number) => Promise<string>;
-  getVerification: (id: string) => Promise<VerificationResult>;
-  updateVerification: (id: string, data: Partial<VerificationResult>) => Promise<boolean>;
-}
-```
-
-## 🎨 Design System
-
-DeepTrust uses a modern, trust-focused design:
-- **Primary Color:** Cyan (#00D9FF) - Technology & blockchain
-- **Accent Color:** Green (#10B981) - Verified content
-- **Warning Color:** Orange - Suspicious content
-- **Destructive Color:** Red - Fake content
-- **Dark Theme:** Professional, high-tech aesthetic
-
-## 🎯 Market Opportunity
-
-- **Target Users:** NFT marketplaces, media platforms, journalists, DAOs, Web3 identity systems
-- **Market Size:** $1B+ emerging market in AI + blockchain verification
-- **Competitive Advantage:** Few decentralized solutions exist for AI content verification
-
-## 🤝 Team
-
-**A Girl's World + Siya**  
-Building the future of digital trust
+*   `storeVerification(string contentHash, uint256 score, string metaHash)`: Anchors a new result.
+*   `getVerification(uint256 id)`: Retrieves full verification details.
+*   `getLatestVerification(string contentHash)`: Checks if content has been verified before.
 
 ## 📄 License
-
-This project is part of the BlockDAG Buildathon submission.
-
-## 🔗 Links
-
-- **Live Demo:** [Deployed URL]
-- **GitHub:** [https://github.com/ST10375560/DeepTrust](https://github.com/ST10375560/DeepTrust)
-- **Documentation:** Coming soon
-- **API Docs:** Coming soon
-
-## 🙏 Acknowledgments
-
-- BlockDAG Buildathon organizers
-- AI/ML research community
-- Web3 ecosystem builders
-
-
+MIT License - BlockDAG Buildathon Submission

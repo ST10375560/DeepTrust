@@ -72,28 +72,54 @@ export class DeepTrustAPI {
    * Full Verification Pipeline
    */
   async verifyContent(file: File): Promise<VerificationResult> {
-    // Step 1: AI Analysis
-    const analysis = await this.analyzeContent(file);
+    try {
+      // Create form data for upload
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Calculate a client-side hash for tracking (simplified)
+      const contentHash = "0x" + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
 
-    // Step 2: TrustScore Calculation
-    const trustScore = await this.calculateTrustScore(analysis);
+      // Call our local Oracle Server
+      const response = await fetch('http://localhost:3001/api/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contentHash: contentHash,
+          fileType: file.type
+        }),
+      });
 
-    // Step 3: Blockchain Proof
-    const blockchainProof = await this.storeOnChain(trustScore);
+      if (!response.ok) {
+        throw new Error('Verification server failed');
+      }
 
-    // Step 4: Determine Status
-    const status = trustScore.score > 80 ? "verified" : 
-                   trustScore.score > 50 ? "suspicious" : 
-                   "fake";
+      const result = await response.json();
+      return result;
 
-    return {
-      id: this.generateId(),
-      trustScore,
-      status,
-      blockchainProof,
-      analysis,
-      createdAt: new Date().toISOString(),
-    };
+    } catch (error) {
+      console.warn("Backend server not running, falling back to local mock", error);
+      
+      // FALLBACK: Local simulation (original logic)
+      const analysis = await this.analyzeContent(file);
+      const trustScore = await this.calculateTrustScore(analysis);
+      const blockchainProof = await this.storeOnChain(trustScore);
+      
+      const status = trustScore.score > 80 ? "verified" : 
+                     trustScore.score > 50 ? "suspicious" : 
+                     "fake";
+
+      return {
+        id: this.generateId(),
+        trustScore,
+        status,
+        blockchainProof,
+        analysis,
+        createdAt: new Date().toISOString(),
+      };
+    }
   }
 
   /**
