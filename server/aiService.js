@@ -1,286 +1,268 @@
 /**
- * AI Service for DeepTrust
- * Handles deepfake detection using HuggingFace Inference API
+ * AI Detection Service for DeepTrust
+ * Handles deepfake/AI-generated content detection using HuggingFace models
  */
 
 import { HfInference } from '@huggingface/inference';
 
-// Initialize HuggingFace client
-const hf = process.env.HUGGINGFACE_API_KEY
-  ? new HfInference(process.env.HUGGINGFACE_API_KEY)
-  : null;
-
-// AI Models for different content types
-const MODELS = {
-  image: {
-    primary: 'umm-maybe/AI-image-detector',
-    fallback: 'Organika/sdxl-detector',
-  },
-  // Future: video, audio models
-};
-
 // Configuration
 const CONFIG = {
-  // Timeout for AI requests (30 seconds)
+  // Primary model for AI-generated image detection
+  primaryModel: 'umm-maybe/AI-image-detector',
+  // Fallback model if primary fails
+  fallbackModel: 'Organika/sdxl-detector',
+  // Maximum retries for API calls
+  maxRetries: 3,
+  // Delay between retries (ms)
+  retryDelay: 1000,
+  // Request timeout (ms)
   timeout: 30000,
-  // Retry attempts for failed requests
-  maxRetries: 2,
-  // Confidence threshold for classification
-  confidenceThreshold: 0.7,
 };
+
+// Initialize HuggingFace client
+let hfClient = null;
+
+/**
+ * Initialize the HuggingFace client
+ * @returns {HfInference|null}
+ */
+function getClient() {
+  if (!hfClient) {
+    const apiKey = process.env.HUGGINGFACE_API_KEY;
+    if (!apiKey) {
+      console.warn('⚠️ [AI] HUGGINGFACE_API_KEY not set - AI detection will use mock results');
+      return null;
+    }
+    hfClient = new HfInference(apiKey);
+    console.log('✅ [AI] HuggingFace client initialized');
+  }
+  return hfClient;
+}
 
 /**
  * Sleep utility for retry delays
  * @param {number} ms - Milliseconds to sleep
  */
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Analyze image for AI-generated content
- * @param {Buffer} imageBuffer - Image file buffer
- * @param {object} options - Analysis options
- * @param {boolean} options.useFallback - Whether to use fallback model if primary fails
- * @returns {Promise<object>} Analysis result
+ * Call HuggingFace image classification with retry logic
+ * @param {Buffer} imageBuffer - Image data as buffer
+ * @param {string} model - Model ID to use
+ * @param {number} attempt - Current attempt number
+ * @returns {Promise<Array>} Classification results
  */
-async function analyzeImage(imageBuffer, options = { useFallback: true }) {
-  if (!hf) {
-    throw new Error('HuggingFace API key not configured');
+async function classifyWithRetry(imageBuffer, model, attempt = 1) {
+  const client = getClient();
+  if (!client) {
+    throw new Error('HuggingFace client not initialized');
   }
 
-  const errors = [];
-  let result = null;
+  try {
+    console.log(`🤖 [AI] Calling model ${model} (attempt ${attempt}/${CONFIG.maxRetries})`);
+    
+    const result = await client.imageClassification({
+      model,
+      data: imageBuffer,
+    });
+
+    return result;
+  } catch (error) {
+    console.error(`❌ [AI] Model ${model} failed:`, error.message);
+
+    // Check if we should retry
+    if (attempt < CONFIG.maxRetries) {
+      // Retry on rate limits or temporary errors
+      if (error.message.includes('rate') || error.message.includes('503') || error.message.includes('timeout')) {
+        console.log(`⏳ [AI] Retrying in ${CONFIG.retryDelay}ms...`);
+        await sleep(CONFIG.retryDelay * attempt); // Exponential backoff
+        return classifyWithRetry(imageBuffer, model, attempt + 1);
+      }
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Parse classification results into standardized format
+ * @param {Array} results - Raw classification results from HuggingFace
+ * @param {string} modelUsed - Model ID that was used
+ * @returns {Object} Parsed analysis result
+ */
+function parseClassificationResults(results, modelUsed) {
+  // Results are typically [{label: "artificial", score: 0.95}, {label: "human", score: 0.05}]
+  // or [{label: "AI", score: 0.8}, {label: "Real", score: 0.2}]
+  
+  let aiScore = 0;
+  let realScore = 0;
+
+  for (const result of results) {
+    const label = result.label.toLowerCase();
+    const score = result.score;
+
+    // Match various label formats
+    if (label.includes('artificial') || label.includes('ai') || label.includes('fake') || label.includes('generated')) {
+      aiScore = Math.max(aiScore, score);
+    } else if (label.includes('human') || label.includes('real') || label.includes('authentic') || label.includes('natural')) {
+      realScore = Math.max(realScore, score);
+    }
+  }
+
+  // Normalize scores if they don't add up properly
+  const total = aiScore + realScore;
+  if (total > 0 && Math.abs(total - 1) > 0.01) {
+    aiScore = aiScore / total;
+    realScore = realScore / total;
+  }
+
+  // If we only got one score, infer the other
+  if (aiScore > 0 && realScore === 0) {
+    realScore = 1 - aiScore;
+  } else if (realScore > 0 && aiScore === 0) {
+    aiScore = 1 - realScore;
+  }
+
+  return {
+    aiProbability: Math.round(aiScore * 100) / 100,
+    realProbability: Math.round(realScore * 100) / 100,
+    modelUsed,
+    rawResults: results,
+  };
+}
+
+/**
+ * Calculate TrustScore from AI analysis
+ * Higher score = more likely to be authentic/real
+ * @param {Object} analysis - Parsed analysis results
+ * @returns {Object} TrustScore object
+ */
+function calculateTrustScore(analysis) {
+  // TrustScore is based on realProbability (higher = more trustworthy)
+  const trustScore = Math.round(analysis.realProbability * 100);
+  
+  // Confidence is based on how decisive the result is
+  // If scores are close to 50/50, confidence is low
+  const scoreDifference = Math.abs(analysis.aiProbability - analysis.realProbability);
+  const confidence = Math.round(50 + (scoreDifference * 50));
+
+  return {
+    score: trustScore,
+    confidence,
+    isAIGenerated: analysis.aiProbability > 0.5,
+  };
+}
+
+/**
+ * Determine verification status from trust score
+ * @param {number} trustScore - Score from 0-100
+ * @returns {string} Status: 'verified', 'suspicious', or 'fake'
+ */
+function determineStatus(trustScore) {
+  if (trustScore >= 80) return 'verified';
+  if (trustScore >= 50) return 'suspicious';
+  return 'fake';
+}
+
+/**
+ * Analyze an image for AI-generated content
+ * @param {Buffer} imageBuffer - Image data as buffer
+ * @returns {Promise<Object>} Analysis result with trustScore, confidence, and detailed analysis
+ */
+async function analyzeImage(imageBuffer) {
+  const client = getClient();
+
+  // If no API key, return mock results
+  if (!client) {
+    console.log('⚠️ [AI] Using mock analysis (no API key configured)');
+    return generateMockAnalysis();
+  }
+
+  let results = null;
+  let modelUsed = CONFIG.primaryModel;
 
   // Try primary model first
   try {
-    console.log('🤖 [AI] Analyzing image with primary model...');
-    result = await analyzeWithModel(MODELS.image.primary, imageBuffer);
-  } catch (error) {
-    console.warn(`⚠️ [AI] Primary model failed: ${error.message}`);
-    errors.push({ model: MODELS.image.primary, error: error.message });
-  }
+    results = await classifyWithRetry(imageBuffer, CONFIG.primaryModel);
+  } catch (primaryError) {
+    console.warn(`⚠️ [AI] Primary model failed, trying fallback: ${primaryError.message}`);
 
-  // Try fallback model if primary failed and fallback is enabled
-  if (!result && options.useFallback) {
+    // Try fallback model
     try {
-      console.log('🤖 [AI] Trying fallback model...');
-      result = await analyzeWithModel(MODELS.image.fallback, imageBuffer);
-    } catch (error) {
-      console.error(`❌ [AI] Fallback model failed: ${error.message}`);
-      errors.push({ model: MODELS.image.fallback, error: error.message });
+      modelUsed = CONFIG.fallbackModel;
+      results = await classifyWithRetry(imageBuffer, CONFIG.fallbackModel);
+    } catch (fallbackError) {
+      console.error(`❌ [AI] All models failed: ${fallbackError.message}`);
+      
+      // Return mock results as last resort
+      console.log('⚠️ [AI] Falling back to mock analysis');
+      return generateMockAnalysis('fallback-mock');
     }
   }
 
-  if (!result) {
-    throw new Error(`All AI models failed: ${errors.map(e => `${e.model}: ${e.error}`).join(', ')}`);
-  }
+  // Parse results
+  const analysis = parseClassificationResults(results, modelUsed);
+  const trustScore = calculateTrustScore(analysis);
+  const status = determineStatus(trustScore.score);
 
-  return result;
-}
-
-/**
- * Analyze image with a specific HuggingFace model
- * @param {string} modelId - HuggingFace model ID
- * @param {Buffer} imageBuffer - Image buffer
- * @returns {Promise<object>} Parsed analysis result
- */
-async function analyzeWithModel(modelId, imageBuffer) {
-  // Convert buffer to base64 for API
-  const base64Image = imageBuffer.toString('base64');
-  const dataUrl = `data:image/jpeg;base64,${base64Image}`;
-
-  // Call HuggingFace Inference API with timeout
-  const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error('AI request timeout')), CONFIG.timeout);
-  });
-
-  const analysisPromise = hf.imageClassification({
-    model: modelId,
-    data: dataUrl,
-  });
-
-  const response = await Promise.race([analysisPromise, timeoutPromise]);
-
-  // Parse response based on model
-  if (modelId === 'umm-maybe/AI-image-detector') {
-    return parseUMMModelResponse(response);
-  } else if (modelId === 'Organika/sdxl-detector') {
-    return parseOrganikaModelResponse(response);
-  } else {
-    throw new Error(`Unsupported model: ${modelId}`);
-  }
-}
-
-/**
- * Parse response from umm-maybe/AI-image-detector
- * @param {Array} response - HuggingFace API response
- * @returns {object} Standardized analysis result
- */
-function parseUMMModelResponse(response) {
-  // Find AI-generated and Real probabilities
-  const aiScore = response.find(item => item.label.toLowerCase().includes('ai'))?.score || 0;
-  const realScore = response.find(item => item.label.toLowerCase().includes('real'))?.score || 0;
-
-  // Normalize scores (they should add up to ~1.0)
-  const totalScore = aiScore + realScore;
-  const normalizedAiScore = totalScore > 0 ? aiScore / totalScore : 0.5;
-  const normalizedRealScore = totalScore > 0 ? realScore / totalScore : 0.5;
+  console.log(`✅ [AI] Analysis complete: trustScore=${trustScore.score}, isAI=${trustScore.isAIGenerated}`);
 
   return {
-    trustScore: Math.round(normalizedRealScore * 100), // 0-100 scale
-    confidence: Math.max(normalizedAiScore, normalizedRealScore), // Higher is more confident
-    isAIGenerated: normalizedAiScore > normalizedRealScore,
+    trustScore: trustScore.score,
+    confidence: trustScore.confidence,
+    isAIGenerated: trustScore.isAIGenerated,
+    status,
     analysis: {
-      aiProbability: normalizedAiScore,
-      realProbability: normalizedRealScore,
-      modelUsed: 'umm-maybe/AI-image-detector',
-      rawResponse: response,
+      aiProbability: analysis.aiProbability,
+      realProbability: analysis.realProbability,
+      modelUsed: analysis.modelUsed,
     },
+    timestamp: new Date().toISOString(),
   };
 }
 
 /**
- * Parse response from Organika/sdxl-detector
- * @param {Array} response - HuggingFace API response
- * @returns {object} Standardized analysis result
+ * Generate mock analysis results for testing/fallback
+ * @param {string} reason - Reason for using mock
+ * @returns {Object} Mock analysis result
  */
-function parseOrganikaModelResponse(response) {
-  // This model might have different label structure
-  // Adapt based on actual response format when testing
-  const aiScore = response.find(item => item.label.toLowerCase().includes('ai') || item.label.toLowerCase().includes('fake'))?.score || 0;
-  const realScore = response.find(item => item.label.toLowerCase().includes('real') || item.label.toLowerCase().includes('authentic'))?.score || 0;
-
-  const totalScore = aiScore + realScore;
-  const normalizedAiScore = totalScore > 0 ? aiScore / totalScore : 0.5;
-  const normalizedRealScore = totalScore > 0 ? realScore / totalScore : 0.5;
+function generateMockAnalysis(reason = 'no-api-key') {
+  // Generate somewhat realistic mock scores
+  const aiProbability = Math.random() * 0.4; // Bias toward real (0-40% AI probability)
+  const realProbability = 1 - aiProbability;
+  const trustScore = Math.round(realProbability * 100);
+  const confidence = Math.round(50 + (Math.abs(aiProbability - realProbability) * 50));
 
   return {
-    trustScore: Math.round(normalizedRealScore * 100),
-    confidence: Math.max(normalizedAiScore, normalizedRealScore),
-    isAIGenerated: normalizedAiScore > normalizedRealScore,
+    trustScore,
+    confidence,
+    isAIGenerated: aiProbability > 0.5,
+    status: determineStatus(trustScore),
     analysis: {
-      aiProbability: normalizedAiScore,
-      realProbability: normalizedRealScore,
-      modelUsed: 'Organika/sdxl-detector',
-      rawResponse: response,
+      aiProbability: Math.round(aiProbability * 100) / 100,
+      realProbability: Math.round(realProbability * 100) / 100,
+      modelUsed: `mock-${reason}`,
     },
+    timestamp: new Date().toISOString(),
+    isMock: true,
   };
-}
-
-/**
- * Calculate TrustScore from analysis result
- * @param {object} analysis - AI analysis result
- * @returns {object} TrustScore object
- */
-function calculateTrustScore(analysis) {
-  const { trustScore, confidence, isAIGenerated } = analysis;
-
-  // Adjust score based on confidence
-  let adjustedScore = trustScore;
-  if (confidence < CONFIG.confidenceThreshold) {
-    // Low confidence - reduce score towards neutral
-    const adjustment = (CONFIG.confidenceThreshold - confidence) * 0.5;
-    adjustedScore = trustScore * (1 - adjustment) + 50 * adjustment;
-  }
-
-  return {
-    score: Math.round(Math.max(0, Math.min(100, adjustedScore))),
-    confidence: Math.round(confidence * 100),
-    factors: {
-      aiProbability: analysis.analysis.aiProbability,
-      realProbability: analysis.analysis.realProbability,
-      modelConfidence: confidence,
-    },
-  };
-}
-
-/**
- * Full verification pipeline: analyze content and calculate trust score
- * @param {Buffer} contentBuffer - Content buffer
- * @param {string} contentType - 'image', 'video', or 'audio'
- * @returns {Promise<object>} Complete analysis result
- */
-async function verifyContent(contentBuffer, contentType) {
-  try {
-    console.log(`🔍 [AI] Starting ${contentType} verification...`);
-
-    let analysis;
-    if (contentType === 'image') {
-      analysis = await analyzeImage(contentBuffer);
-    } else {
-      throw new Error(`Content type '${contentType}' not yet supported`);
-    }
-
-    const trustScore = calculateTrustScore(analysis);
-
-    console.log(`✅ [AI] Verification complete: score=${trustScore.score}, confidence=${trustScore.confidence}%`);
-
-    return {
-      success: true,
-      trustScore,
-      analysis: analysis.analysis,
-      timestamp: new Date().toISOString(),
-    };
-
-  } catch (error) {
-    console.error(`❌ [AI] Verification failed: ${error.message}`);
-
-    // Return fallback result for demo stability
-    return {
-      success: false,
-      error: error.message,
-      trustScore: {
-        score: 50, // Neutral score
-        confidence: 0,
-        factors: {
-          aiProbability: 0.5,
-          realProbability: 0.5,
-          modelConfidence: 0,
-        },
-      },
-      analysis: {
-        modelUsed: 'none',
-        error: error.message,
-      },
-      timestamp: new Date().toISOString(),
-    };
-  }
 }
 
 /**
  * Check if AI service is properly configured
- * @returns {boolean} True if service is ready
+ * @returns {boolean}
  */
 function isConfigured() {
-  return !!hf;
-}
-
-/**
- * Get service status information
- * @returns {object} Service status
- */
-function getStatus() {
-  return {
-    configured: isConfigured(),
-    models: {
-      image: MODELS.image,
-    },
-    config: {
-      timeout: CONFIG.timeout,
-      maxRetries: CONFIG.maxRetries,
-      confidenceThreshold: CONFIG.confidenceThreshold,
-    },
-  };
+  return !!process.env.HUGGINGFACE_API_KEY;
 }
 
 // Export functions
 export {
   analyzeImage,
-  verifyContent,
-  calculateTrustScore,
+  generateMockAnalysis,
   isConfigured,
-  getStatus,
   CONFIG as AI_CONFIG,
 };
 
