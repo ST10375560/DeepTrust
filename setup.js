@@ -71,10 +71,10 @@ async function main() {
 
   // BlockDAG RPC URL
   console.log('BlockDAG RPC URL:');
-  console.log('  Default: https://rpc.primordial.bdagscan.com');
+  console.log('  Default: https://rpc.awakening.bdagscan.com');
   console.log('  Chain ID: 1043');
-  const rpcUrl = await question(`RPC URL [${config.BDAG_RPC_URL || 'https://rpc.primordial.bdagscan.com'}]: `);
-  config.BDAG_RPC_URL = rpcUrl.trim() || config.BDAG_RPC_URL || 'https://rpc.primordial.bdagscan.com';
+  const rpcUrl = await question(`RPC URL [${config.BDAG_RPC_URL || 'https://rpc.awakening.bdagscan.com'}]: `);
+  config.BDAG_RPC_URL = rpcUrl.trim() || config.BDAG_RPC_URL || 'https://rpc.awakening.bdagscan.com';
 
   // Private Key
   console.log('');

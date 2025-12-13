@@ -41,7 +41,7 @@ export const Architecture = () => {
                   </div>
                   <h3 className="font-semibold mb-2">AI Detection</h3>
                   <p className="text-sm text-muted-foreground">
-                    CNN + Transformer analyzes content
+                    HuggingFace AI analyzes content
                   </p>
                 </div>
               </Card>
@@ -111,13 +111,13 @@ export const Architecture = () => {
           <Card className="p-6 bg-card/30 backdrop-blur border-border">
             <h3 className="text-xl font-semibold mb-3 flex items-center">
               <Brain className="w-5 h-5 mr-2 text-primary" />
-              AI Layer
+              AI Detection Layer
             </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• CNN for image/frame analysis</li>
-              <li>• Transformer for temporal consistency</li>
-              <li>• Multi-modal detection (image/video/audio)</li>
-              <li>• Confidence score generation</li>
+              <li>• HuggingFace Inference API</li>
+              <li>• AI Image Detector model</li>
+              <li>• Real vs Artificial classification</li>
+              <li>• Confidence probability scores</li>
             </ul>
           </Card>
 
@@ -127,23 +127,23 @@ export const Architecture = () => {
               TrustScore Engine
             </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• Weighted scoring algorithm</li>
-              <li>• Metadata analysis</li>
-              <li>• Context evaluation</li>
-              <li>• Historical data correlation</li>
+              <li>• 0-100% authenticity score</li>
+              <li>• AI vs Human probability</li>
+              <li>• Confidence level calculation</li>
+              <li>• Status: Verified/Suspicious/Fake</li>
             </ul>
           </Card>
 
           <Card className="p-6 bg-card/30 backdrop-blur border-border">
             <h3 className="text-xl font-semibold mb-3 flex items-center">
               <Shield className="w-5 h-5 mr-2 text-verified" />
-              Blockchain Layer
+              Blockchain + IPFS
             </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• Cryptographic hash generation</li>
-              <li>• Smart contract integration</li>
-              <li>• Immutable proof storage</li>
-              <li>• Cross-chain compatibility</li>
+              <li>• SHA-256 content hashing</li>
+              <li>• Pinata IPFS metadata storage</li>
+              <li>• BlockDAG smart contract</li>
+              <li>• Immutable on-chain proofs</li>
             </ul>
           </Card>
         </div>

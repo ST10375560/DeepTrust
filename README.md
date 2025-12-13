@@ -66,7 +66,7 @@ PORT=3001
 
 # Blockchain (BlockDAG)
 PRIVATE_KEY=your_wallet_private_key
-BDAG_RPC_URL=https://rpc.primordial.bdagscan.com
+BDAG_RPC_URL=https://rpc.awakening.bdagscan.com
 CONTRACT_ADDRESS=your_deployed_contract_address
 
 # AI Detection (HuggingFace)

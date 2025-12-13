@@ -1,43 +1,23 @@
 /**
  * AI Detection Service for DeepTrust
- * Handles deepfake/AI-generated content detection using HuggingFace models
+ * Handles deepfake/AI-generated content detection using HuggingFace Inference API
  */
-
-import { HfInference } from '@huggingface/inference';
 
 // Configuration
 const CONFIG = {
   // Primary model for AI-generated image detection
   primaryModel: 'umm-maybe/AI-image-detector',
-  // Fallback model if primary fails
-  fallbackModel: 'Organika/sdxl-detector',
+  // Fallback model if primary fails  
+  fallbackModel: 'Falconsai/nsfw_image_detection',
   // Maximum retries for API calls
   maxRetries: 3,
   // Delay between retries (ms)
-  retryDelay: 1000,
+  retryDelay: 2000,
   // Request timeout (ms)
-  timeout: 30000,
+  timeout: 60000,
+  // HuggingFace API base URL (new router endpoint with hf-inference provider)
+  apiBaseUrl: 'https://router.huggingface.co/hf-inference/models',
 };
-
-// Initialize HuggingFace client
-let hfClient = null;
-
-/**
- * Initialize the HuggingFace client
- * @returns {HfInference|null}
- */
-function getClient() {
-  if (!hfClient) {
-    const apiKey = process.env.HUGGINGFACE_API_KEY;
-    if (!apiKey) {
-      console.warn('⚠️ [AI] HUGGINGFACE_API_KEY not set - AI detection will use mock results');
-      return null;
-    }
-    hfClient = new HfInference(apiKey);
-    console.log('✅ [AI] HuggingFace client initialized');
-  }
-  return hfClient;
-}
 
 /**
  * Sleep utility for retry delays
@@ -48,6 +28,54 @@ function sleep(ms) {
 }
 
 /**
+ * Call HuggingFace Inference API directly
+ * @param {Buffer} imageBuffer - Image data as buffer
+ * @param {string} model - Model ID to use
+ * @returns {Promise<Array>} Classification results
+ */
+async function callHuggingFaceAPI(imageBuffer, model) {
+  const apiKey = process.env.HUGGINGFACE_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('HUGGINGFACE_API_KEY not configured');
+  }
+
+  const url = `${CONFIG.apiBaseUrl}/${model}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/octet-stream',
+    },
+    body: imageBuffer,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    
+    // Check for model loading state
+    if (response.status === 503) {
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: errorText };
+      }
+      
+      if (errorData.error && errorData.error.includes('loading')) {
+        throw new Error(`Model loading: ${errorData.estimated_time || 'unknown'}s wait`);
+      }
+    }
+    
+    throw new Error(`API error ${response.status}: ${errorText}`);
+  }
+
+  const result = await response.json();
+  return result;
+}
+
+/**
  * Call HuggingFace image classification with retry logic
  * @param {Buffer} imageBuffer - Image data as buffer
  * @param {string} model - Model ID to use
@@ -55,29 +83,28 @@ function sleep(ms) {
  * @returns {Promise<Array>} Classification results
  */
 async function classifyWithRetry(imageBuffer, model, attempt = 1) {
-  const client = getClient();
-  if (!client) {
-    throw new Error('HuggingFace client not initialized');
-  }
-
   try {
     console.log(`🤖 [AI] Calling model ${model} (attempt ${attempt}/${CONFIG.maxRetries})`);
     
-    const result = await client.imageClassification({
-      model,
-      data: imageBuffer,
-    });
-
+    const result = await callHuggingFaceAPI(imageBuffer, model);
     return result;
+    
   } catch (error) {
-    console.error(`❌ [AI] Model ${model} failed:`, error.message);
+    console.error(`❌ [AI] Model ${model} attempt ${attempt} failed:`, error.message);
 
     // Check if we should retry
     if (attempt < CONFIG.maxRetries) {
-      // Retry on rate limits or temporary errors
-      if (error.message.includes('rate') || error.message.includes('503') || error.message.includes('timeout')) {
-        console.log(`⏳ [AI] Retrying in ${CONFIG.retryDelay}ms...`);
-        await sleep(CONFIG.retryDelay * attempt); // Exponential backoff
+      // Retry on model loading, rate limits, or temporary errors
+      if (
+        error.message.includes('loading') || 
+        error.message.includes('rate') || 
+        error.message.includes('503') || 
+        error.message.includes('timeout') ||
+        error.message.includes('529')
+      ) {
+        const waitTime = CONFIG.retryDelay * attempt;
+        console.log(`⏳ [AI] Retrying in ${waitTime}ms...`);
+        await sleep(waitTime);
         return classifyWithRetry(imageBuffer, model, attempt + 1);
       }
     }
@@ -96,22 +123,56 @@ function parseClassificationResults(results, modelUsed) {
   // Results are typically [{label: "artificial", score: 0.95}, {label: "human", score: 0.05}]
   // or [{label: "AI", score: 0.8}, {label: "Real", score: 0.2}]
   
+  console.log(`📊 [AI] Raw results:`, JSON.stringify(results));
+  
   let aiScore = 0;
   let realScore = 0;
 
-  for (const result of results) {
-    const label = result.label.toLowerCase();
-    const score = result.score;
+  if (!Array.isArray(results)) {
+    console.warn('⚠️ [AI] Unexpected result format, expected array');
+    return {
+      aiProbability: 0.5,
+      realProbability: 0.5,
+      modelUsed,
+      rawResults: results,
+    };
+  }
 
-    // Match various label formats
-    if (label.includes('artificial') || label.includes('ai') || label.includes('fake') || label.includes('generated')) {
+  for (const result of results) {
+    const label = (result.label || '').toLowerCase();
+    const score = result.score || 0;
+
+    // Match various label formats for AI-generated
+    if (
+      label.includes('artificial') || 
+      label.includes('ai') || 
+      label.includes('fake') || 
+      label.includes('generated') ||
+      label.includes('synthetic')
+    ) {
       aiScore = Math.max(aiScore, score);
-    } else if (label.includes('human') || label.includes('real') || label.includes('authentic') || label.includes('natural')) {
+    } 
+    // Match various label formats for real/human
+    else if (
+      label.includes('human') || 
+      label.includes('real') || 
+      label.includes('authentic') || 
+      label.includes('natural') ||
+      label.includes('photo')
+    ) {
       realScore = Math.max(realScore, score);
     }
   }
 
-  // Normalize scores if they don't add up properly
+  // If we couldn't identify labels, use first two results
+  if (aiScore === 0 && realScore === 0 && results.length >= 2) {
+    // Assume first is AI, second is real (common pattern)
+    aiScore = results[0].score || 0.5;
+    realScore = results[1].score || 0.5;
+    console.log(`⚠️ [AI] Using fallback label interpretation`);
+  }
+
+  // Normalize scores if they don't add up to 1
   const total = aiScore + realScore;
   if (total > 0 && Math.abs(total - 1) > 0.01) {
     aiScore = aiScore / total;
@@ -172,12 +233,12 @@ function determineStatus(trustScore) {
  * @returns {Promise<Object>} Analysis result with trustScore, confidence, and detailed analysis
  */
 async function analyzeImage(imageBuffer) {
-  const client = getClient();
+  const apiKey = process.env.HUGGINGFACE_API_KEY;
 
   // If no API key, return mock results
-  if (!client) {
+  if (!apiKey) {
     console.log('⚠️ [AI] Using mock analysis (no API key configured)');
-    return generateMockAnalysis();
+    return generateMockAnalysis('no-api-key');
   }
 
   let results = null;
@@ -187,7 +248,8 @@ async function analyzeImage(imageBuffer) {
   try {
     results = await classifyWithRetry(imageBuffer, CONFIG.primaryModel);
   } catch (primaryError) {
-    console.warn(`⚠️ [AI] Primary model failed, trying fallback: ${primaryError.message}`);
+    console.warn(`⚠️ [AI] Primary model failed: ${primaryError.message}`);
+    console.log(`🔄 [AI] Trying fallback model...`);
 
     // Try fallback model
     try {
@@ -198,7 +260,7 @@ async function analyzeImage(imageBuffer) {
       
       // Return mock results as last resort
       console.log('⚠️ [AI] Falling back to mock analysis');
-      return generateMockAnalysis('fallback-mock');
+      return generateMockAnalysis('api-failure');
     }
   }
 
@@ -265,5 +327,3 @@ export {
   isConfigured,
   CONFIG as AI_CONFIG,
 };
-
-

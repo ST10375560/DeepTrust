@@ -79,23 +79,21 @@ async function uploadMetadata(metadata, name = 'deeptrust-verification') {
       ...metadata,
     };
 
-    const result = await client.upload.json(wrappedMetadata, {
-      metadata: {
-        name: `${name}_${Date.now()}`,
-        keyValues: {
-          app: 'DeepTrust',
-          type: 'verification',
-        },
+    const result = await client.upload.public.json(wrappedMetadata, {
+      name: `${name}_${Date.now()}`,
+      keyvalues: {
+        app: 'DeepTrust',
+        type: 'verification',
       },
     });
 
-    console.log(`✅ [IPFS] Metadata uploaded: ${result.IpfsHash}`);
+    console.log(`✅ [IPFS] Metadata uploaded: ${result.cid}`);
 
     return {
       success: true,
-      cid: result.IpfsHash,
-      url: `${CONFIG.gateway}${result.IpfsHash}`,
-      size: result.PinSize,
+      cid: result.cid,
+      url: `${CONFIG.gateway}${result.cid}`,
+      size: result.size || 0,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
@@ -128,23 +126,21 @@ async function uploadFile(fileBuffer, filename, mimeType) {
     // Create a File object from the buffer
     const file = new File([fileBuffer], filename, { type: mimeType });
 
-    const result = await client.upload.file(file, {
-      metadata: {
-        name: filename,
-        keyValues: {
-          app: 'DeepTrust',
-          type: 'content',
-        },
+    const result = await client.upload.public.file(file, {
+      name: filename,
+      keyvalues: {
+        app: 'DeepTrust',
+        type: 'content',
       },
     });
 
-    console.log(`✅ [IPFS] File uploaded: ${result.IpfsHash}`);
+    console.log(`✅ [IPFS] File uploaded: ${result.cid}`);
 
     return {
       success: true,
-      cid: result.IpfsHash,
-      url: `${CONFIG.gateway}${result.IpfsHash}`,
-      size: result.PinSize,
+      cid: result.cid,
+      url: `${CONFIG.gateway}${result.cid}`,
+      size: result.size || 0,
       filename,
       timestamp: new Date().toISOString(),
     };

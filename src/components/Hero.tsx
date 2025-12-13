@@ -52,7 +52,7 @@ export const Hero = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">AI Detection</h3>
             <p className="text-sm text-muted-foreground">
-              CNN + Transformer architecture detects deepfakes with 95%+ accuracy
+              Real-time deepfake analysis powered by HuggingFace AI models
             </p>
           </div>
 
@@ -62,7 +62,7 @@ export const Hero = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">TrustScore</h3>
             <p className="text-sm text-muted-foreground">
-              0-100% authenticity score with detailed metadata analysis
+              0-100% authenticity score with AI probability breakdown
             </p>
           </div>
 
@@ -74,7 +74,7 @@ export const Hero = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">On-Chain Proof</h3>
             <p className="text-sm text-muted-foreground">
-              Immutable verification stored on blockchain with cryptographic hash
+              Immutable verification on BlockDAG with IPFS metadata
             </p>
           </div>
         </div>

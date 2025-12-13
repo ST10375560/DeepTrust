@@ -52,7 +52,7 @@ try {
 }
 
 // Initialize provider and contract
-const rpcUrl = process.env.BDAG_RPC_URL || 'https://rpc.primordial.bdagscan.com';
+const rpcUrl = process.env.BDAG_RPC_URL || 'https://rpc.awakening.bdagscan.com';
 let provider = null;
 let contract = null;
 let wallet = null;

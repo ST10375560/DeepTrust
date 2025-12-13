@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Code2, Database, Shield, Cpu } from "lucide-react";
+import { Code2, Database, Shield, Cpu, CheckCircle2 } from "lucide-react";
 
 export const TechStack = () => {
   return (
@@ -17,12 +17,12 @@ export const TechStack = () => {
             <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-4">
               <Cpu className="w-6 h-6 text-primary" />
             </div>
-            <h3 className="font-semibold mb-2">AI/ML</h3>
+            <h3 className="font-semibold mb-2">AI Detection</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• PyTorch</li>
-              <li>• TensorFlow</li>
-              <li>• CNN Architecture</li>
-              <li>• Transformer Models</li>
+              <li>• HuggingFace Inference</li>
+              <li>• AI Image Detector Model</li>
+              <li>• Real-time Analysis</li>
+              <li>• Confidence Scoring</li>
             </ul>
           </Card>
 
@@ -33,9 +33,9 @@ export const TechStack = () => {
             <h3 className="font-semibold mb-2">Blockchain</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• BlockDAG Network</li>
-              <li>• Smart Contracts</li>
-              <li>• Oracle Integration</li>
-              <li>• IPFS Storage</li>
+              <li>• Solidity Smart Contracts</li>
+              <li>• Ethers.js Integration</li>
+              <li>• On-chain Proofs</li>
             </ul>
           </Card>
 
@@ -45,10 +45,10 @@ export const TechStack = () => {
             </div>
             <h3 className="font-semibold mb-2">Backend</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Node.js</li>
-              <li>• FastAPI</li>
-              <li>• GraphQL</li>
-              <li>• WebSocket</li>
+              <li>• Node.js + Express</li>
+              <li>• Pinata IPFS Storage</li>
+              <li>• SHA-256 Hashing</li>
+              <li>• RESTful API</li>
             </ul>
           </Card>
 
@@ -67,24 +67,60 @@ export const TechStack = () => {
         </div>
 
         <Card className="mt-12 p-8 bg-card/30 backdrop-blur border-border">
-          <h3 className="text-2xl font-semibold mb-4">Wave 2 Deliverables</h3>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="flex items-center gap-3 mb-4">
+            <CheckCircle2 className="w-8 h-8 text-green-500" />
+            <h3 className="text-2xl font-semibold">Fully Functional System</h3>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
             <div>
-              <h4 className="font-semibold mb-3 text-primary">Functional Architecture</h4>
+              <h4 className="font-semibold mb-3 text-primary">AI Detection Layer</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>✓ Multi-layer verification pipeline</li>
-                <li>✓ AI detection scaffolding (CNN + Transformer)</li>
-                <li>✓ TrustScore calculation engine</li>
-                <li>✓ Blockchain integration layer</li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Real HuggingFace API integration
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Deepfake detection model
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  TrustScore calculation
+                </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3 text-primary">Mock APIs & Smart Contracts</h4>
+              <h4 className="font-semibold mb-3 text-primary">Decentralized Storage</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>✓ Verification API endpoints</li>
-                <li>✓ Smart contract scaffolds</li>
-                <li>✓ Oracle integration structure</li>
-                <li>✓ Badge generation system</li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  IPFS via Pinata
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Permanent metadata storage
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Content-addressable CIDs
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3 text-primary">Blockchain Anchoring</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Live on BlockDAG mainnet
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Immutable verification proofs
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Viewable on block explorer
+                </li>
               </ul>
             </div>
           </div>
